@@ -5,7 +5,7 @@ Welcome to the **House Price Predictor** project! This is a real-world, end-to-e
 You'll start from raw data and move through data preprocessing, feature engineering, experimentation, model tracking with MLflow, and optionally using Jupyter for exploration – all while applying industry-grade tooling.
 
 > 🚀 **Want to master MLOps from scratch?**  
-Check out the [MLOps Bootcamp at School of DevOps](https://schoolofdevops.com) to level up your skills.
+> Check out the [MLOps Bootcamp at School of DevOps](https://schoolofdevops.com) to level up your skills.
 
 ---
 
@@ -97,6 +97,7 @@ If you prefer an interactive experience, launch JupyterLab with:
 uv python -m jupyterlab
 # or
 python -m jupyterlab
+uv run --with jupyter jupyter lab
 ```
 
 ---
@@ -133,19 +134,23 @@ python src/models/train_model.py   --config configs/model_config.yaml   --data d
 
 ---
 
+## Building FastAPI and Streamlit
 
-## Building FastAPI and Streamlit 
+The code for both the apps are available in `src/api` and `streamlit_app` already. To build and launch these apps
 
-The code for both the apps are available in `src/api` and `streamlit_app` already. To build and launch these apps 
+- Add a `Dockerfile` in the root of the source code for building FastAPI
+- Add `streamlit_app/Dockerfile` to package and build the Streamlit app
+- Add `docker-compose.yaml` in the root path to launch both these apps. be sure to provide `API_URL=http://fastapi:8000` in the streamlit app's environment.
 
-  * Add a  `Dockerfile` in the root of the source code for building FastAPI  
-  * Add `streamlit_app/Dockerfile` to package and build the Streamlit app  
-  * Add `docker-compose.yaml` in the root path to launch both these apps. be sure to provide `API_URL=http://fastapi:8000` in the streamlit app's environment. 
+```
+ docker image build -t fastapi .
+ docker run --rm -it -p 8000:8000 fastapi
 
+```
 
-Once you have launched both the apps, you should be able to access streamlit web ui and make predictions. 
+Once you have launched both the apps, you should be able to access streamlit web ui and make predictions.
 
-You could also test predictions with FastAPI directly using 
+You could also test predictions with FastAPI directly using
 
 ```
 curl -X POST "http://localhost:8000/predict" \
@@ -161,8 +166,7 @@ curl -X POST "http://localhost:8000/predict" \
 
 ```
 
-Be sure to replace `http://localhost:8000/predict` with actual endpoint based on where its running. 
-
+Be sure to replace `http://localhost:8000/predict` with actual endpoint based on where its running.
 
 ## 🧠 Learn More About MLOps
 
