@@ -53,14 +53,14 @@
                             <!-- Square Footage -->
                             <div class="mb-4">
                                 <label class="form-label fw-semibold">Square Footage: <span id="sqft-value" class="text-primary">{{.FormData.Sqft}} sq ft</span></label>
-                                <input type="range" class="form-range" id="sqft" name="sqft" min="500" max="5000" step="50" value="{{.FormData.Sqft}}" oninput="updateSqftValue(this.value)">
+                                <input type="range" class="form-range" id="sqft" name="sqft" min="0" max="5000" step="50" value="{{.FormData.Sqft}}" oninput="updateSqftValue(this.value)">
                             </div>
 
                             <!-- Bedrooms and Bathrooms -->
                             <div class="row mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Bedrooms</label>
-                                    <select class="form-select" name="bedrooms">
+                                    <select class="form-select" name="bedrooms" id="bedrooms">
                                         <option value="1" {{if eq .FormData.Bedrooms 1}}selected{{end}}>1</option>
                                         <option value="2" {{if eq .FormData.Bedrooms 2}}selected{{end}}>2</option>
                                         <option value="3" {{if eq .FormData.Bedrooms 3}}selected{{end}}>3</option>
@@ -71,25 +71,28 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Bathrooms</label>
-                                    <select class="form-select" name="bathrooms">
-                                        <option value="1" {{if eq .FormData.Bathrooms 1}}selected{{end}}>1</option>
+                                    <select class="form-select" name="bathrooms" id="bathrooms">
+                                        <option value="0" {{if eq .FormData.Bathrooms 0.0}}selected{{end}}>0</option>
+                                        <option value="1" {{if eq .FormData.Bathrooms 1.0}}selected{{end}}>1</option>
                                         <option value="1.5" {{if eq .FormData.Bathrooms 1.5}}selected{{end}}>1.5</option>
-                                        <option value="2" {{if eq .FormData.Bathrooms 2}}selected{{end}}>2</option>
+                                        <option value="2" {{if eq .FormData.Bathrooms 2.0}}selected{{end}}>2</option>
                                         <option value="2.5" {{if eq .FormData.Bathrooms 2.5}}selected{{end}}>2.5</option>
-                                        <option value="3" {{if eq .FormData.Bathrooms 3}}selected{{end}}>3</option>
+                                        <option value="3" {{if eq .FormData.Bathrooms 3.0}}selected{{end}}>3</option>
                                         <option value="3.5" {{if eq .FormData.Bathrooms 3.5}}selected{{end}}>3.5</option>
-                                        <option value="4" {{if eq .FormData.Bathrooms 4}}selected{{end}}>4</option>
+                                        <option value="4" {{if eq .FormData.Bathrooms 4.0}}selected{{end}}>4</option>
                                     </select>
                                 </div>
                             </div>
 
                             <!-- Location -->
                             <div class="mb-4">
-                                <label class="form-label fw-semibold">Location</label>
-                                <select class="form-select" name="location">
+                                <label class="form-label fw-semibold" for="location">Location</label>
+                                <select class="form-select" name="location" id="location">
+                                    <option value="" {{if and (ne .FormData.Location "Urban") (ne .FormData.Location "Suburban") (ne .FormData.Location "Rural") (ne .FormData.Location "Waterfront") (ne .FormData.Location "Mountain")}}selected{{end}} disabled>Select location</option>
                                     <option value="Urban" {{if eq .FormData.Location "Urban"}}selected{{end}}>Urban</option>
                                     <option value="Suburban" {{if eq .FormData.Location "Suburban"}}selected{{end}}>Suburban</option>
                                     <option value="Rural" {{if eq .FormData.Location "Rural"}}selected{{end}}>Rural</option>
+                                    <option value="Urban">Urban</option>
                                     <option value="Waterfront" {{if eq .FormData.Location "Waterfront"}}selected{{end}}>Waterfront</option>
                                     <option value="Mountain" {{if eq .FormData.Location "Mountain"}}selected{{end}}>Mountain</option>
                                 </select>
@@ -107,6 +110,12 @@
                                 Predict Price
                             </button>
                         </form>
+
+                        <!-- Payload Preview -->
+                        <div class="mt-4">
+                            <label class="form-label fw-semibold">Payload Preview</label>
+                            <pre class="bg-light p-3 rounded border"><code id="payload-preview"></code></pre>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -203,17 +212,60 @@
             document.getElementById('year-value').textContent = value;
         }
 
+        function updatePayload() {
+            const sqftEl = document.getElementById('sqft');
+            const bedroomsEl = document.getElementById('bedrooms');
+            const bathroomsEl = document.getElementById('bathrooms');
+            const locationEl = document.getElementById('location');
+            const yearEl = document.getElementById('year');
+            const previewEl = document.getElementById('payload-preview');
+
+            if (!sqftEl || !bedroomsEl || !bathroomsEl || !locationEl || !yearEl || !previewEl) return;
+
+            const payload = {
+                sqft: parseInt(sqftEl.value, 10) || 0,
+                bedrooms: parseInt(bedroomsEl.value, 10) || 0,
+                bathrooms: parseFloat(bathroomsEl.value) || 0,
+                location: locationEl.value,
+                year_built: parseInt(yearEl.value, 10) || 0,
+            };
+
+            previewEl.textContent = JSON.stringify(payload, null, 2);
+        }
+
         // Initialize values on page load
         document.addEventListener('DOMContentLoaded', function() {
             const sqftSlider = document.getElementById('sqft');
             const yearSlider = document.getElementById('year');
-            
+            const bedroomsSel = document.getElementById('bedrooms');
+            const bathroomsSel = document.getElementById('bathrooms');
+            const locationInput = document.getElementById('location');
+
             if (sqftSlider) {
                 updateSqftValue(sqftSlider.value);
+                sqftSlider.addEventListener('input', () => { updateSqftValue(sqftSlider.value); updatePayload(); });
+                sqftSlider.addEventListener('change', () => { updateSqftValue(sqftSlider.value); updatePayload(); });
             }
             if (yearSlider) {
                 updateYearValue(yearSlider.value);
+                yearSlider.addEventListener('input', () => { updateYearValue(yearSlider.value); updatePayload(); });
+                yearSlider.addEventListener('change', () => { updateYearValue(yearSlider.value); updatePayload(); });
             }
+            if (bedroomsSel) {
+                bedroomsSel.addEventListener('input', updatePayload);
+                bedroomsSel.addEventListener('change', updatePayload);
+            }
+            if (bathroomsSel) {
+                bathroomsSel.addEventListener('input', updatePayload);
+                bathroomsSel.addEventListener('change', updatePayload);
+            }
+            if (locationInput) {
+                locationInput.addEventListener('input', updatePayload);
+                locationInput.addEventListener('change', updatePayload);
+            }
+
+            // Initial payload render
+            updatePayload();
         });
     </script>
 </body>

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -8,12 +9,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/sessions"
 )
 
 // PredictionRequest represents the data sent to the prediction API
@@ -28,10 +27,10 @@ type PredictionRequest struct {
 
 // PredictionResponse represents the response from the prediction API
 type PredictionResponse struct {
-	PredictedPrice     float64          `json:"predicted_price"`
-	ConfidenceInterval []float64        `json:"confidence_interval"`
+	PredictedPrice     float64            `json:"predicted_price"`
+	ConfidenceInterval []float64          `json:"confidence_interval"`
 	FeaturesImportance map[string]float64 `json:"features_importance"`
-	PredictionTime     string           `json:"prediction_time"`
+	PredictionTime     string             `json:"prediction_time"`
 }
 
 // FormData represents the form data submitted by the user
@@ -45,20 +44,16 @@ type FormData struct {
 
 // PageData represents the data passed to the template
 type PageData struct {
-	Title           string
-	Version         string
-	Hostname        string
-	IPAddress       string
-	FormData        FormData
-	Prediction      *PredictionResponse
-	ShowPrediction  bool
-	ErrorMessage    string
-	SuccessMessage  string
+	Title          string
+	Version        string
+	Hostname       string
+	IPAddress      string
+	FormData       FormData
+	Prediction     *PredictionResponse
+	ShowPrediction bool
+	ErrorMessage   string
+	SuccessMessage string
 }
-
-var (
-	store = sessions.NewCookieStore([]byte("secret-key"))
-)
 
 func main() {
 	// Get environment variables
@@ -72,7 +67,7 @@ func main() {
 	}
 	apiURL := os.Getenv("API_URL")
 	if apiURL == "" {
-		apiURL = "http://model:8000"
+		apiURL = "http://localhost:8000/latest"
 	}
 
 	// Get hostname and IP
@@ -80,11 +75,11 @@ func main() {
 	ipAddress := "127.0.0.1" // Simplified for demo
 
 	router := gin.Default()
-	
+
 	// Set HTML template
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
 	router.SetHTMLTemplate(tmpl)
-	
+
 	// Serve static files
 	router.Static("/static", "./static")
 
@@ -96,11 +91,11 @@ func main() {
 			Hostname:  hostname,
 			IPAddress: ipAddress,
 			FormData: FormData{
-				Sqft:      1500,
-				Bedrooms:  3,
-				Bathrooms: 2.0,
-				Location:  "Suburban",
-				YearBuilt: 2000,
+				Sqft:      0,
+				Bedrooms:  1,
+				Bathrooms: 0.0,
+				Location:  "string",
+				YearBuilt: 2023,
 			},
 		}
 		c.HTML(http.StatusOK, "index.html", data)
@@ -137,7 +132,7 @@ func main() {
 		if err != nil {
 			// Use mock data if API fails
 			prediction = &PredictionResponse{
-				PredictedPrice: 467145,
+				PredictedPrice:     467145,
 				ConfidenceInterval: []float64{420430.5, 513859.5},
 				FeaturesImportance: map[string]float64{
 					"sqft":      0.43,
@@ -168,14 +163,14 @@ func main() {
 
 func callPredictionAPI(apiURL string, data PredictionRequest) (*PredictionResponse, error) {
 	url := fmt.Sprintf("%s/predict", strings.TrimSuffix(apiURL, "/"))
-	
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request data: %v", err)
 	}
 
 	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Post(url, "application/json", strings.NewReader(string(jsonData)))
+	resp, err := client.Post(url, "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("API request failed: %v", err)
 	}
