@@ -60,9 +60,6 @@ jobs:
           docker rm mlflow-server
           docker rmi ghcr.io/mlflow/mlflow:latest
 
-      - name: Checkout
-        uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
