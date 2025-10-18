@@ -8,31 +8,45 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      run_all:
+        description: "Run all jobs"
+        required: false
+        default: "true"
+      run_data_processing:
+        description: "Run Data Processing job"
+        required: false
+        default: "false"
+      run_model_training:
+        description: "Run model training job"
+        required: false
+        default: "false"
+      run_build_and_push:
+        description: "Run build and push job"
+        required: false
+        default: "false"
 
 jobs:
-  build_mlops:
+  run_data_processing:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
 
       - name: Set up python
-        uses: actions/setup-python@v6
-
+        uses: actions/setup-python@v6Checkout
         with:
           python-version: "3.11.9"
-
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Run Data Processing
         run: |
           python src/data/run_processing.py \
             --input data/raw/house_data.csv \
             --output data/processed/cleaned_house_data.csv
-
       - name: Run Feature Engineering
         run: |
           python src/features/engineer.py  \
@@ -40,11 +54,46 @@ jobs:
             --output data/processed/featured_house_data.csv \
             --preprocessor models/trained/preprocessor.pkl
 
+      - name: Upload processed data
+        uses: actions/upload-artifact@v4
+        with:
+          name: processed-data
+          path: data/processed/featured_house_data.csv
+
+      - name: Upload preprocessor
+        uses: actions/upload-artifact@v4
+        with:
+          name: preprocessor
+          path: models/trained/preprocessor.pkl
+  run_model_training:
+    needs: run_data_processing
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - name: Set up python
+        uses: actions/setup-python@v6Checkout
+        with:
+          python-version: "3.11.9"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip 
+          pip install -r requirements.txt
+
+      - name: Download processed data
+        uses: actions/download-artifact@v5
+        with:
+          name: processed-data
+          path: data/processed/
+
       - name: Start mlflow server
         run: |
           docker run -d -p 5555:5000 --name mlflow-server ghcr.io/mlflow/mlflow:latest \
           mlflow server --host 0.0.0.0 --backend-store-uri sqlite:///mlflow.db \
                         --default-artifact-root /tmp/mlruns
+      - name: Seep 3 sec beforenext step
+        run: |
+          sleep 3
 
       - name: Train the model
         run: |
@@ -54,11 +103,36 @@ jobs:
             --models-dir models \
             --mlflow-tracking-uri http://localhost:5555
 
+      - name: Upload trained model
+        uses: actions/upload-artifact@v5
+        with:
+          name: trained-model
+          path: models/
+
       - name: Cleaning up mlflow
         run: |
           docker stop mlflow-server
           docker rm mlflow-server
           docker rmi ghcr.io/mlflow/mlflow:latest
+
+  build_and_push:
+    needs: run_model_training
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download trained model
+        uses: actions/download-artifact@v4
+        with:
+          name: trained-model
+          path: models/
+
+      - name: Download preprocessor
+        uses: actions/download-artifact@v5
+        with:
+          name: preprocessor
+          path: models/trained/
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
