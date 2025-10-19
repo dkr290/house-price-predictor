@@ -28,9 +28,11 @@ on:
 
 jobs:
   run_data_processing:
-    if: github.event.inputs.run_all == 'true' || github.event.inputs.run_data_processing == 'true'
+    if: |
+      github.event_name != 'workflow_dispatch' ||
+      github.event.inputs.run_all == 'true' || 
+      github.event.inputs.run_data_processing == 'true'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -67,7 +69,10 @@ jobs:
           name: preprocessor
           path: models/trained/preprocessor.pkl
   run_model_training:
-    if: github.event.inputs.run_all == 'true' || github.event.inputs.run_model_training == 'true'
+    if: |
+      github.event_name != 'workflow_dispatch'
+      github.event.inputs.run_all == 'true' ||
+      github.event.inputs.run_model_training == 'true'
     needs: run_data_processing
     runs-on: ubuntu-latest
     steps:
@@ -118,7 +123,10 @@ jobs:
           docker rmi ghcr.io/mlflow/mlflow:latest
 
   build_and_push:
-    if: github.event.inputs.run_all == 'true' || github.event.inputs.run_build_and_push == 'true'
+    if: |
+      github.event_name != 'workflow_dispatch' ||
+      github.event.inputs.run_all == 'true' ||
+      github.event.inputs.run_build_and_push == 'true'
     needs: run_model_training
     runs-on: ubuntu-latest
     steps:
