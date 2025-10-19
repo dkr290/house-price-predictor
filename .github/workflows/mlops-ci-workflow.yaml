@@ -28,6 +28,7 @@ on:
 
 jobs:
   run_data_processing:
+    if: github.event.inputs.run_all == 'true' || github.event.inputs.run_data_processing == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -66,6 +67,7 @@ jobs:
           name: preprocessor
           path: models/trained/preprocessor.pkl
   run_model_training:
+    if: github.event.inputs.run_all == 'true' || github.event.inputs.run_model_training == 'true'
     needs: run_data_processing
     runs-on: ubuntu-latest
     steps:
@@ -91,7 +93,7 @@ jobs:
           docker run -d -p 5555:5000 --name mlflow-server ghcr.io/mlflow/mlflow:latest \
           mlflow server --host 0.0.0.0 --backend-store-uri sqlite:///mlflow.db \
                         --default-artifact-root /tmp/mlruns
-      - name: Seep 3 sec beforenext step
+      - name: Sleep 3 sec beforenext step
         run: |
           sleep 3
 
@@ -116,6 +118,7 @@ jobs:
           docker rmi ghcr.io/mlflow/mlflow:latest
 
   build_and_push:
+    if: github.event.inputs.run_all == 'true' || github.event.inputs.run_build_and_push == 'true'
     needs: run_model_training
     runs-on: ubuntu-latest
     steps:
@@ -150,7 +153,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}fastapi:${{ github.sha }}
+          tags: ghcr.io/${{ github.repository_owner }}/fastapi:${{ github.sha }}
           file: Dockerfile
       - name: Build and Push latest
         uses: docker/build-push-action@v6
@@ -158,5 +161,5 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/{{ github.repository_owner }}fastapi:latest
+          tags: ghcr.io/${{ github.repository_owner }}/fastapi:latest
           file: Dockerfile
