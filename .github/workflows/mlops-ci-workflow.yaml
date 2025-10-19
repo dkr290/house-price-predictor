@@ -70,7 +70,7 @@ jobs:
           path: models/trained/preprocessor.pkl
   run_model_training:
     if: |
-      github.event_name != 'workflow_dispatch'
+      github.event_name != 'workflow_dispatch' ||
       github.event.inputs.run_all == 'true' ||
       github.event.inputs.run_model_training == 'true'
     needs: run_data_processing
